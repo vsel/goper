@@ -25,6 +25,12 @@ func main() {
 
 	req.Header.Add("Accept", "text/html")
 	req.Header.Add("User-Agent", "MSIE/15.0")
+
+	makeRequest(client, req)
+
+}
+
+func makeRequest(client *http.Client, req *http.Request) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
