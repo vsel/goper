@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+	sendPayload("https://google.com")
+}
+func sendPayload(url string) {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -16,7 +19,7 @@ func main() {
 	}
 	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest(
-		"GET", "https://google.com", nil,
+		"GET", url, nil,
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -27,9 +30,7 @@ func main() {
 	req.Header.Add("User-Agent", "MSIE/15.0")
 
 	makeRequest(client, req)
-
 }
-
 func makeRequest(client *http.Client, req *http.Request) {
 	resp, err := client.Do(req)
 	if err != nil {
