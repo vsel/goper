@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -31,16 +29,18 @@ func sendPayload(url string) {
 	req.Header.Add("User-Agent", "MSIE/15.0")
 
 	makeRequest(client, req)
+	makeRequest(client, req)
+	makeRequest(client, req)
 }
 
 func makeRequest(client *http.Client, req *http.Request) {
 	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	defer resp.Body.Close()
-
-	io.Copy(os.Stdout, resp.Body) //вывод в консоль
+	fmt.Println(&client)
 }
