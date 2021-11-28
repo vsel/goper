@@ -11,6 +11,7 @@ import (
 func main() {
 	sendPayload("https://google.com")
 }
+
 func sendPayload(url string) {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
@@ -31,6 +32,7 @@ func sendPayload(url string) {
 
 	makeRequest(client, req)
 }
+
 func makeRequest(client *http.Client, req *http.Request) {
 	resp, err := client.Do(req)
 	if err != nil {
