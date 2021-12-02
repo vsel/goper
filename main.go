@@ -12,10 +12,10 @@ func main() {
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
 	}
-	sendPayload(tr, "https://google.com")
+	SendPayload(tr, "https://google.com")
 }
 
-func sendPayload(tr http.RoundTripper, url string) {
+func SendPayload(tr http.RoundTripper, url string) {
 
 	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest(
@@ -29,12 +29,12 @@ func sendPayload(tr http.RoundTripper, url string) {
 	req.Header.Add("Accept", "text/html")
 	req.Header.Add("User-Agent", "MSIE/15.0")
 
-	makeRequest(client, req)
-	makeRequest(client, req)
-	makeRequest(client, req)
+	MakeRequest(client, req)
+	MakeRequest(client, req)
+	MakeRequest(client, req)
 }
 
-func makeRequest(client *http.Client, req *http.Request) {
+func MakeRequest(client *http.Client, req *http.Request) {
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 

@@ -36,7 +36,7 @@ func NewReq(url string) (*http.Request, error) {
 	return req, nil
 }
 
-func Test_makeRequest(t *testing.T) {
+func TestMakeRequest(t *testing.T) {
 	url := "google.com"
 	req, err := NewReq(url)
 	if err != nil {
@@ -52,10 +52,10 @@ func Test_makeRequest(t *testing.T) {
 			Header: make(http.Header),
 		}
 	})
-	makeRequest(client, req)
+	MakeRequest(client, req)
 }
 
-func Test_sendPayload(t *testing.T) {
+func TestSendPayload(t *testing.T) {
 	roundFn := func(req *http.Request) *http.Response {
 		// Test request parameters
 		return &http.Response{
@@ -68,5 +68,5 @@ func Test_sendPayload(t *testing.T) {
 	}
 	tr := RoundTripFunc(roundFn)
 
-	sendPayload(tr, "test.com")
+	SendPayload(tr, "test.com")
 }
