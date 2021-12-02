@@ -7,15 +7,16 @@ import (
 )
 
 func main() {
-	sendPayload("https://google.com")
-}
-
-func sendPayload(url string) {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
 	}
+	sendPayload(tr, "https://google.com")
+}
+
+func sendPayload(tr http.RoundTripper, url string) {
+
 	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest(
 		"GET", url, nil,
