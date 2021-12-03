@@ -59,7 +59,13 @@ func TestMakeRequest(t *testing.T) {
 
 func TestSendPayload(t *testing.T) {
 	tr := NewRoundTripFunc()
-	sendPayload(tr, "test.com")
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+	body := "test"
+	url := "google.com"
+	sendPayload(tr, url, headers, &body)
 }
 
 func TestPayloadWorker(t *testing.T) {
@@ -67,8 +73,13 @@ func TestPayloadWorker(t *testing.T) {
 
 	url := "https://google.com"
 	tr := NewRoundTripFunc()
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+	body := "test"
 
 	wg.Add(1)
-	go payloadWorker(&wg, tr, url)
+	go payloadWorker(&wg, tr, url, headers, &body)
 	wg.Wait()
 }
