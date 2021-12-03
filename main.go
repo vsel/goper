@@ -23,8 +23,8 @@ func main() {
 
 	for i := 0; i < 30; i++ {
 		guard <- struct{}{}
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			payloadWorker(&wg, tr, url)
 			<-guard
 		}()
