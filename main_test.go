@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"testing"
 )
 
@@ -69,4 +70,24 @@ func TestSendPayload(t *testing.T) {
 	tr := RoundTripFunc(roundFn)
 
 	sendPayload(tr, "test.com")
+}
+
+func TestPayloadWorker(t *testing.T) {
+	var wg sync.WaitGroup
+
+	url := "https://google.com"
+	roundFn := func(req *http.Request) *http.Response {
+		// Test request parameters
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	}
+	tr := RoundTripFunc(roundFn)
+	wg.Add(1)
+	go payloadWorker(&wg, tr, url)
+	wg.Wait()
 }
