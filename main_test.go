@@ -53,16 +53,7 @@ func TestMakeRequest(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	client := NewTestClient(func(req *http.Request) *http.Response {
-		// Test request parameters
-		return &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
-			Header: make(http.Header),
-		}
-	})
+	client := NewTestClient(NewRoundTripFunc())
 	makeRequest(client, req)
 }
 
