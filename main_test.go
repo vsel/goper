@@ -52,7 +52,7 @@ func TestMakeRequest(t *testing.T) {
 			Header: make(http.Header),
 		}
 	})
-	MakeRequest(client, req)
+	makeRequest(client, req)
 }
 
 func TestSendPayload(t *testing.T) {
@@ -68,5 +68,5 @@ func TestSendPayload(t *testing.T) {
 	}
 	tr := RoundTripFunc(roundFn)
 
-	SendPayload(tr, "test.com")
+	sendPayload(tr, "test.com")
 }
