@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,13 +20,20 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	url := "https://google.com"
+	url := "http://127.0.0.1:8080"
+
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+
+	body := "test"
 
 	for i := 0; i < 30; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url)
+			payloadWorker(&wg, tr, url, headers, &body)
 			<-guard
 		}()
 	}
@@ -33,25 +41,36 @@ func main() {
 	wg.Wait()
 }
 
-func payloadWorker(wg *sync.WaitGroup, tr http.RoundTripper, url string) {
+func payloadWorker(
+	wg *sync.WaitGroup,
+	tr http.RoundTripper,
+	url string,
+	headers map[string]string,
+	body *string,
+) {
 	defer wg.Done()
-	sendPayload(tr, url)
+	sendPayload(tr, url, headers, body)
 }
 
-func sendPayload(tr http.RoundTripper, url string) {
-
+func sendPayload(
+	tr http.RoundTripper,
+	url string,
+	headers map[string]string,
+	body *string,
+) {
+	bodyReader := strings.NewReader(*body)
 	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest(
-		"GET", url, nil,
+		"POST", url, bodyReader,
 	)
 	if err != nil {
 		fmt.Println("NewRequest error")
 		fmt.Println(err)
 		return
 	}
-
-	req.Header.Add("Accept", "text/html")
-	req.Header.Add("User-Agent", "MSIE/15.0")
+	for headerKey, headerValue := range headers {
+		req.Header.Add(headerKey, headerValue)
+	}
 
 	makeRequest(client, req)
 }
