@@ -37,6 +37,16 @@ func NewReq(url string) (*http.Request, error) {
 	return req, nil
 }
 
+func NewRoundTripFunc() RoundTripFunc {
+	return func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`OK`)),
+			Header:     make(http.Header),
+		}
+	}
+}
+
 func TestMakeRequest(t *testing.T) {
 	url := "google.com"
 	req, err := NewReq(url)
@@ -57,18 +67,7 @@ func TestMakeRequest(t *testing.T) {
 }
 
 func TestSendPayload(t *testing.T) {
-	roundFn := func(req *http.Request) *http.Response {
-		// Test request parameters
-		return &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
-			Header: make(http.Header),
-		}
-	}
-	tr := RoundTripFunc(roundFn)
-
+	tr := NewRoundTripFunc()
 	sendPayload(tr, "test.com")
 }
 
@@ -76,17 +75,8 @@ func TestPayloadWorker(t *testing.T) {
 	var wg sync.WaitGroup
 
 	url := "https://google.com"
-	roundFn := func(req *http.Request) *http.Response {
-		// Test request parameters
-		return &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
-			Header: make(http.Header),
-		}
-	}
-	tr := RoundTripFunc(roundFn)
+	tr := NewRoundTripFunc()
+
 	wg.Add(1)
 	go payloadWorker(&wg, tr, url)
 	wg.Wait()
