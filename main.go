@@ -29,13 +29,23 @@ func main() {
 
 	body := "test"
 
-	for i := 0; i < 30; i++ {
+	finishChan := make(chan struct{})
+
+	for i := 1; i < 31; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url, headers, &body)
+			payloadWorker(&wg, tr, url, headers, &body, finishChan)
 			<-guard
 		}()
+		if i%10 == 0 {
+			go func() {
+				time.Sleep(6 * time.Second)
+				for z := 0; z < 10; z++ {
+					finishChan <- struct{}{}
+				}
+			}()
+		}
 	}
 
 	wg.Wait()
@@ -47,9 +57,21 @@ func payloadWorker(
 	url string,
 	headers map[string]string,
 	body *string,
+	finishChan chan struct{},
 ) {
 	defer wg.Done()
-	sendPayload(tr, url, headers, body)
+
+payloadLOOP:
+	for {
+		select {
+		case <-finishChan:
+			fmt.Println("killed")
+			break payloadLOOP
+		default:
+			sendPayload(tr, url, headers, body)
+		}
+	}
+
 }
 
 func sendPayload(
@@ -95,6 +117,4 @@ func makeRequest(client *http.Client, req *http.Request) {
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Println(&client)
 }
