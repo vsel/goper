@@ -105,12 +105,6 @@ func TestPayloadWorker(t *testing.T) {
 }
 
 func TestMainFunc(t *testing.T) {
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
-	}
-
 	maxGoroutines := 10
 	guard := make(chan struct{}, maxGoroutines)
 
@@ -127,6 +121,8 @@ func TestMainFunc(t *testing.T) {
 
 	finishChan := make(chan struct{})
 
+	tr := NewRoundTripFunc()
+
 	for i := 1; i < 11; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
@@ -135,8 +131,9 @@ func TestMainFunc(t *testing.T) {
 			<-guard
 		}()
 		if i%10 == 0 {
+			killTimer := time.NewTimer(1 * time.Millisecond)
 			go func() {
-				time.Sleep(1 * time.Millisecond)
+				<-killTimer.C
 				for z := 0; z < 10; z++ {
 					finishChan <- struct{}{}
 				}

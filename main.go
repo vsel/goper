@@ -39,8 +39,9 @@ func main() {
 			<-guard
 		}()
 		if i%10 == 0 {
+			killTimer := time.NewTimer(3 * time.Second)
 			go func() {
-				time.Sleep(6 * time.Second)
+				<-killTimer.C
 				for z := 0; z < 10; z++ {
 					finishChan <- struct{}{}
 				}
