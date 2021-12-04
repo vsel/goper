@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 )
 
 // RoundTripFunc .
@@ -47,6 +48,12 @@ func NewRoundTripFunc() RoundTripFunc {
 	}
 }
 
+func NewBadRespRoundTripFunc() RoundTripFunc {
+	return func(req *http.Request) *http.Response {
+		return nil
+	}
+}
+
 func TestMakeRequest(t *testing.T) {
 	url := "google.com"
 	req, err := NewReq(url)
@@ -54,6 +61,16 @@ func TestMakeRequest(t *testing.T) {
 		panic(err)
 	}
 	client := NewTestClient(NewRoundTripFunc())
+	makeRequest(client, req)
+}
+
+func TestBadResponseMakeRequest(t *testing.T) {
+	url := "google.com"
+	req, err := NewReq(url)
+	if err != nil {
+		panic(err)
+	}
+	client := NewTestClient(NewBadRespRoundTripFunc())
 	makeRequest(client, req)
 }
 
@@ -78,8 +95,54 @@ func TestPayloadWorker(t *testing.T) {
 		"User-Agent": "MSIE/15.0",
 	}
 	body := "test"
+	finishChan := make(chan struct{})
 
 	wg.Add(1)
-	go payloadWorker(&wg, tr, url, headers, &body)
+	go payloadWorker(&wg, tr, url, headers, &body, finishChan)
+	time.Sleep(1 * time.Millisecond)
+	finishChan <- struct{}{}
+	wg.Wait()
+}
+
+func TestMainFunc(t *testing.T) {
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	}
+
+	maxGoroutines := 10
+	guard := make(chan struct{}, maxGoroutines)
+
+	var wg sync.WaitGroup
+
+	url := "http://127.0.0.1:8080"
+
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+
+	body := "test"
+
+	finishChan := make(chan struct{})
+
+	for i := 1; i < 11; i++ {
+		guard <- struct{}{}
+		wg.Add(1)
+		go func() {
+			payloadWorker(&wg, tr, url, headers, &body, finishChan)
+			<-guard
+		}()
+		if i%10 == 0 {
+			go func() {
+				time.Sleep(1 * time.Millisecond)
+				for z := 0; z < 10; z++ {
+					finishChan <- struct{}{}
+				}
+			}()
+		}
+	}
+
 	wg.Wait()
 }
