@@ -5,51 +5,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 )
 
 func main() {
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
-	}
-
-	maxGoroutines := 10
-	guard := make(chan struct{}, maxGoroutines)
-
-	var wg sync.WaitGroup
-
-	url := "http://127.0.0.1:8080"
-
-	headers := map[string]string{
-		"Accept":     "text/html",
-		"User-Agent": "MSIE/15.0",
-	}
-
-	body := "test"
-
-	finishChan := make(chan struct{})
-
-	for i := 1; i < 31; i++ {
-		guard <- struct{}{}
-		wg.Add(1)
-		go func() {
-			payloadWorker(&wg, tr, url, headers, &body, finishChan)
-			<-guard
-		}()
-		if i%10 == 0 {
-			killTimer := time.NewTimer(3 * time.Second)
-			go func() {
-				<-killTimer.C
-				for z := 0; z < 10; z++ {
-					finishChan <- struct{}{}
-				}
-			}()
-		}
-	}
-
-	wg.Wait()
 }
 
 func payloadWorker(
