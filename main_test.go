@@ -95,10 +95,12 @@ func TestPayloadWorker(t *testing.T) {
 		"User-Agent": "MSIE/15.0",
 	}
 	body := "test"
+
 	finishChan := make(chan struct{})
+	const repeatTimeout time.Duration = 1
 
 	wg.Add(1)
-	go payloadWorker(&wg, tr, url, headers, &body, finishChan)
+	go payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
 	time.Sleep(1 * time.Millisecond)
 	finishChan <- struct{}{}
 	wg.Wait()
@@ -122,12 +124,13 @@ func TestMainFunc(t *testing.T) {
 	body := "test"
 
 	finishChan := make(chan struct{})
+	const repeatTimeout time.Duration = 1
 
 	for i := 1; i < 11; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url, headers, &body, finishChan)
+			payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
 			<-guard
 		}()
 		if i%10 == 0 {
@@ -146,10 +149,14 @@ func TestMainFunc(t *testing.T) {
 
 func TestRealWorldServer(t *testing.T) {
 	t.Skip()
+
+	// Transport problem if server await sleep 5 second it waits. IT'S BAD!!!!
 	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
+		MaxIdleConns:          0,
+		IdleConnTimeout:       0 * time.Second,
+		ResponseHeaderTimeout: 0 * time.Second,
+		ExpectContinueTimeout: 0 * time.Second,
+		DisableCompression:    true,
 	} // Real Transport
 
 	maxGoroutines := 10
@@ -167,19 +174,20 @@ func TestRealWorldServer(t *testing.T) {
 	body := "test"
 
 	finishChan := make(chan struct{})
+	const repeatTimeout time.Duration = 1000
 
-	for i := 1; i < 31; i++ {
+	for i := 1; i < (maxGoroutines*2)+1; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url, headers, &body, finishChan)
+			payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
 			<-guard
 		}()
-		if i%10 == 0 {
+		if i%maxGoroutines == 0 {
 			killTimer := time.NewTimer(3 * time.Second)
 			go func() {
 				<-killTimer.C
-				for z := 0; z < 10; z++ {
+				for z := 0; z < maxGoroutines; z++ {
 					finishChan <- struct{}{}
 				}
 			}()
