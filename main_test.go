@@ -105,6 +105,8 @@ func TestPayloadWorker(t *testing.T) {
 }
 
 func TestMainFunc(t *testing.T) {
+	tr := NewRoundTripFunc() // Mocked Transport
+
 	maxGoroutines := 10
 	guard := make(chan struct{}, maxGoroutines)
 
@@ -121,8 +123,6 @@ func TestMainFunc(t *testing.T) {
 
 	finishChan := make(chan struct{})
 
-	tr := NewRoundTripFunc()
-
 	for i := 1; i < 11; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
@@ -132,6 +132,51 @@ func TestMainFunc(t *testing.T) {
 		}()
 		if i%10 == 0 {
 			killTimer := time.NewTimer(1 * time.Millisecond)
+			go func() {
+				<-killTimer.C
+				for z := 0; z < 10; z++ {
+					finishChan <- struct{}{}
+				}
+			}()
+		}
+	}
+
+	wg.Wait()
+}
+
+func TestRealWorldServer(t *testing.T) {
+	t.Skip()
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	} // Real Transport
+
+	maxGoroutines := 10
+	guard := make(chan struct{}, maxGoroutines)
+
+	var wg sync.WaitGroup
+
+	url := "http://127.0.0.1:8080"
+
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+
+	body := "test"
+
+	finishChan := make(chan struct{})
+
+	for i := 1; i < 31; i++ {
+		guard <- struct{}{}
+		wg.Add(1)
+		go func() {
+			payloadWorker(&wg, tr, url, headers, &body, finishChan)
+			<-guard
+		}()
+		if i%10 == 0 {
+			killTimer := time.NewTimer(3 * time.Second)
 			go func() {
 				<-killTimer.C
 				for z := 0; z < 10; z++ {
