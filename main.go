@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -17,8 +18,10 @@ func payloadWorker(
 	headers map[string]string,
 	body *string,
 	finishChan chan struct{},
+	repeatTimeout time.Duration,
 ) {
 	defer wg.Done()
+	limitTicker := time.NewTicker(repeatTimeout * time.Millisecond)
 
 payloadLOOP:
 	for {
@@ -26,7 +29,7 @@ payloadLOOP:
 		case <-finishChan:
 			fmt.Println("killed")
 			break payloadLOOP
-		default:
+		case <-limitTicker.C:
 			sendPayload(tr, url, headers, body)
 		}
 	}
