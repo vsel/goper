@@ -150,7 +150,7 @@ func TestMainFunc(t *testing.T) {
 func TestRealWorldServer(t *testing.T) {
 	//t.Skip()
 
-	// Transport problem if server await sleep 5 second it waits. IT'S BAD!!!!
+	// Transport problem if server await sleep 5 second it waits. IT'S BAD!!!! FIXED 06.12 1c21625282bece7947231ccfc64a5bf980430b80
 	tr := &http.Transport{
 		MaxIdleConns:          1,
 		IdleConnTimeout:       1 * time.Millisecond,
