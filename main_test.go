@@ -96,13 +96,13 @@ func TestPayloadWorker(t *testing.T) {
 	}
 	body := "test"
 
-	finishChan := make(chan struct{})
+	cancelChan := make(chan struct{})
 	const repeatTimeout time.Duration = 1
 
 	wg.Add(1)
-	go payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
+	go payloadWorker(&wg, tr, url, headers, &body, cancelChan, repeatTimeout)
 	time.Sleep(1 * time.Millisecond)
-	finishChan <- struct{}{}
+	cancelChan <- struct{}{}
 	wg.Wait()
 }
 
@@ -123,14 +123,14 @@ func TestMainFunc(t *testing.T) {
 
 	body := "test"
 
-	finishChan := make(chan struct{})
+	cancelChan := make(chan struct{})
 	const repeatTimeout time.Duration = 1
 
 	for i := 1; i < 11; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
+			payloadWorker(&wg, tr, url, headers, &body, cancelChan, repeatTimeout)
 			<-guard
 		}()
 		if i%10 == 0 {
@@ -138,7 +138,7 @@ func TestMainFunc(t *testing.T) {
 			go func() {
 				<-killTimer.C
 				for z := 0; z < 10; z++ {
-					finishChan <- struct{}{}
+					cancelChan <- struct{}{}
 				}
 			}()
 		}
@@ -152,10 +152,10 @@ func TestRealWorldServer(t *testing.T) {
 
 	// Transport problem if server await sleep 5 second it waits. IT'S BAD!!!!
 	tr := &http.Transport{
-		MaxIdleConns:          0,
-		IdleConnTimeout:       0 * time.Second,
-		ResponseHeaderTimeout: 0 * time.Second,
-		ExpectContinueTimeout: 0 * time.Second,
+		MaxIdleConns:          1,
+		IdleConnTimeout:       1 * time.Millisecond,
+		ResponseHeaderTimeout: 1 * time.Millisecond,
+		ExpectContinueTimeout: 1 * time.Millisecond,
 		DisableCompression:    true,
 	} // Real Transport
 
@@ -173,14 +173,14 @@ func TestRealWorldServer(t *testing.T) {
 
 	body := "test"
 
-	finishChan := make(chan struct{})
+	cancelChan := make(chan struct{})
 	const repeatTimeout time.Duration = 1000
 
 	for i := 1; i < (maxGoroutines*2)+1; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, url, headers, &body, finishChan, repeatTimeout)
+			payloadWorker(&wg, tr, url, headers, &body, cancelChan, repeatTimeout)
 			<-guard
 		}()
 		if i%maxGoroutines == 0 {
@@ -188,7 +188,7 @@ func TestRealWorldServer(t *testing.T) {
 			go func() {
 				<-killTimer.C
 				for z := 0; z < maxGoroutines; z++ {
-					finishChan <- struct{}{}
+					cancelChan <- struct{}{}
 				}
 			}()
 		}

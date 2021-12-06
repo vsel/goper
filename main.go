@@ -17,7 +17,7 @@ func payloadWorker(
 	url string,
 	headers map[string]string,
 	body *string,
-	finishChan chan struct{},
+	cancelChan chan struct{},
 	repeatTimeout time.Duration,
 ) {
 	defer wg.Done()
@@ -26,7 +26,7 @@ func payloadWorker(
 payloadLOOP:
 	for {
 		select {
-		case <-finishChan:
+		case <-cancelChan:
 			fmt.Println("killed")
 			break payloadLOOP
 		case <-limitTicker.C:
