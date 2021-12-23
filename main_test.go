@@ -196,3 +196,5 @@ func TestRealWorldServer(t *testing.T) {
 
 	wg.Wait()
 }
+
+// Add test that makes request curl -H "Content-Type: application/json" -d '{"url":"http://127.0.0.1:8080", "headers":{"Accept":"text/html","User-Agent": "MSIE/15.0"},"body":"test"}' http://localhost:8383/payload

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -70,13 +71,7 @@ type Server struct {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	s.log("%s %s", r.Method, r.URL.Path)
-
 	s.mux.ServeHTTP(w, r)
 }
 
@@ -92,21 +87,26 @@ func (s *Server) index(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (s *Server) payload(w http.ResponseWriter, _ *http.Request) {
-	url := "http://127.0.0.1:8080"
-
-	headers := map[string]string{
-		"Accept":     "text/html",
-		"User-Agent": "MSIE/15.0",
+func (s *Server) payload(w http.ResponseWriter, req *http.Request) {
+	decoder := json.NewDecoder(req.Body)
+	var payload Payload
+	err := decoder.Decode(&payload)
+	if err != nil {
+		panic(err)
 	}
-
-	body := "test"
-	processPayload(&url, &headers, &body)
-	_, err := w.Write([]byte("Hello, world!"))
+	go processPayload(&payload.Url, &payload.Headers, &payload.Body)
+	_, err = w.Write([]byte("Hello, world!"))
 	if err != nil {
 		s.logger.Printf("ListenAndServe error %s", err)
 		return
 	}
+	return
+}
+
+type Payload struct {
+	Url     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
 }
 
 func processPayload(
