@@ -51,6 +51,7 @@ func newServer(options ...Option) *Server {
 
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("/", s.index)
+	s.mux.HandleFunc("/payload", s.payload)
 
 	return s
 }
@@ -89,6 +90,64 @@ func (s *Server) index(w http.ResponseWriter, _ *http.Request) {
 		s.logger.Printf("ListenAndServe error %s", err)
 		return
 	}
+}
+
+func (s *Server) payload(w http.ResponseWriter, _ *http.Request) {
+	url := "http://127.0.0.1:8080"
+
+	headers := map[string]string{
+		"Accept":     "text/html",
+		"User-Agent": "MSIE/15.0",
+	}
+
+	body := "test"
+	processPayload(&url, &headers, &body)
+	_, err := w.Write([]byte("Hello, world!"))
+	if err != nil {
+		s.logger.Printf("ListenAndServe error %s", err)
+		return
+	}
+}
+
+func processPayload(
+	url *string,
+	headers *map[string]string,
+	body *string,
+) {
+	tr := &http.Transport{
+		MaxIdleConns:          1,
+		IdleConnTimeout:       1 * time.Millisecond,
+		ResponseHeaderTimeout: 1 * time.Millisecond,
+		ExpectContinueTimeout: 1 * time.Millisecond,
+		DisableCompression:    true,
+	}
+
+	maxGoroutines := 10
+	guard := make(chan struct{}, maxGoroutines)
+
+	var wg sync.WaitGroup
+
+	cancelChan := make(chan struct{})
+	const repeatTimeout time.Duration = 1000
+
+	for i := 1; i < (maxGoroutines*2)+1; i++ {
+		guard <- struct{}{}
+		wg.Add(1)
+		go func() {
+			payloadWorker(&wg, tr, *url, *headers, body, cancelChan, repeatTimeout)
+			<-guard
+		}()
+		if i%maxGoroutines == 0 {
+			killTimer := time.NewTimer(3 * time.Second)
+			go func() {
+				<-killTimer.C
+				for z := 0; z < maxGoroutines; z++ {
+					cancelChan <- struct{}{}
+				}
+			}()
+		}
+	}
+
 }
 
 func payloadWorker(
