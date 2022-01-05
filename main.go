@@ -80,7 +80,7 @@ func (s *Server) log(format string, v ...interface{}) {
 }
 
 func (s *Server) index(w http.ResponseWriter, _ *http.Request) {
-	_, err := w.Write([]byte("Hello, world!"))
+	_, err := w.Write([]byte("Goper API"))
 	if err != nil {
 		s.logger.Printf("ListenAndServe error %s", err)
 		return
@@ -94,8 +94,15 @@ func (s *Server) payload(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	go processPayload(&payload.Url, &payload.Headers, &payload.Body)
-	_, err = w.Write([]byte("Hello, world!"))
+	go processPayload(
+		&payload.Url,
+		&payload.Headers,
+		&payload.Body,
+		payload.ParallelWorkersNum,
+		payload.WorkDuration,
+		payload.RepeatTimeout,
+	)
+	_, err = w.Write([]byte("Task sent to workers"))
 	if err != nil {
 		s.logger.Printf("ListenAndServe error %s", err)
 		return
@@ -104,15 +111,21 @@ func (s *Server) payload(w http.ResponseWriter, req *http.Request) {
 }
 
 type Payload struct {
-	Url     string            `json:"url"`
-	Headers map[string]string `json:"headers"`
-	Body    string            `json:"body"`
+	Url                string            `json:"url"`
+	Headers            map[string]string `json:"headers"`
+	Body               string            `json:"body"`
+	ParallelWorkersNum int               `json:"parallel_workers"`
+	WorkDuration       int               `json:"duration"`
+	RepeatTimeout      int               `json:"repeat_request_timeout"`
 }
 
 func processPayload(
 	url *string,
 	headers *map[string]string,
 	body *string,
+	parallelWorkersNum int,
+	workDuration int,
+	repeatTimeout int,
 ) {
 	tr := &http.Transport{
 		MaxIdleConns:          1,
@@ -122,23 +135,22 @@ func processPayload(
 		DisableCompression:    true,
 	}
 
-	maxGoroutines := 10
+	maxGoroutines := parallelWorkersNum
 	guard := make(chan struct{}, maxGoroutines)
 
 	var wg sync.WaitGroup
 
 	cancelChan := make(chan struct{})
-	const repeatTimeout time.Duration = 1000
 
-	for i := 1; i < (maxGoroutines*2)+1; i++ {
+	for i := 1; i < maxGoroutines+1; i++ {
 		guard <- struct{}{}
 		wg.Add(1)
 		go func() {
-			payloadWorker(&wg, tr, *url, *headers, body, cancelChan, repeatTimeout)
+			payloadWorker(&wg, tr, *url, *headers, body, cancelChan, time.Duration(repeatTimeout))
 			<-guard
 		}()
 		if i%maxGoroutines == 0 {
-			killTimer := time.NewTimer(3 * time.Second)
+			killTimer := time.NewTimer(time.Duration(workDuration) * time.Second)
 			go func() {
 				<-killTimer.C
 				for z := 0; z < maxGoroutines; z++ {
